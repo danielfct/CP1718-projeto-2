@@ -1,5 +1,8 @@
 package cp.benchmark.intset;
 
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 /**
  * @author Pascal Felber
  * @author Tiago Vale
@@ -9,11 +12,13 @@ public class IntSetLinkedListPerNodeLock implements IntSet {
 
   public class Node {
     private final int m_value;
+    private final Lock l;
     private Node m_next;
 
     public Node(int value, Node next) {
       m_value = value;
       m_next = next;
+      l = new ReentrantLock();
     }
 
     public Node(int value) {
@@ -30,6 +35,14 @@ public class IntSetLinkedListPerNodeLock implements IntSet {
 
     public Node getNext() {
       return m_next;
+    }
+
+    public void lock() {
+      this.l.lock();
+    }
+
+    public void unlock() {
+      this.l.unlock();
     }
   }
 
@@ -48,16 +61,25 @@ public class IntSetLinkedListPerNodeLock implements IntSet {
     Node previous = m_first;
     Node next = previous.getNext();
     int v;
-    while ((v = next.getValue()) < value) {
-      previous = next;
-      next = previous.getNext();
-    }
-    result = v != value;
-    if (result) {
-      previous.setNext(new Node(value, next));
-    }
+    try {
+      previous.lock();
+      next.lock();
+      while ((v = next.getValue()) < value) {
+        previous.unlock();
+        previous = next;
+        next = previous.getNext();
+        next.lock();
+      }
+      result = v != value;
+      if (result) {
+        previous.setNext(new Node(value, next));
+      }
 
-    return result;
+      return result;
+    } finally {
+      previous.unlock();
+      next.unlock();
+    }
   }
 
   public boolean remove(int value) {
@@ -66,16 +88,25 @@ public class IntSetLinkedListPerNodeLock implements IntSet {
     Node previous = m_first;
     Node next = previous.getNext();
     int v;
-    while ((v = next.getValue()) < value) {
-      previous = next;
-      next = previous.getNext();
-    }
-    result = v == value;
-    if (result) {
-      previous.setNext(next.getNext());
-    }
+    try {
+      previous.lock();
+      next.lock();
+      while ((v = next.getValue()) < value) {
+        previous.unlock();
+        previous = next;
+        next = previous.getNext();
+        next.lock();
+      }
+      result = v == value;
+      if (result) {
+        previous.setNext(next.getNext());
+      }
 
-    return result;
+      return result;
+    } finally {
+      previous.unlock();
+      next.unlock();
+    }
   }
 
   public boolean contains(int value) {
@@ -84,13 +115,22 @@ public class IntSetLinkedListPerNodeLock implements IntSet {
     Node previous = m_first;
     Node next = previous.getNext();
     int v;
-    while ((v = next.getValue()) < value) {
-      previous = next;
-      next = previous.getNext();
-    }
-    result = (v == value);
+    try {
+      previous.lock();
+      next.lock();
+      while ((v = next.getValue()) < value) {
+        previous.unlock();
+        previous = next;
+        next = previous.getNext();
+        next.lock();
+      }
+      result = (v == value);
 
-    return result;
+      return result;
+    } finally {
+      previous.unlock();
+      next.unlock();
+    }
   }
 
   public void validate() {
