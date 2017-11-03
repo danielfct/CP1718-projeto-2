@@ -93,16 +93,21 @@ public class IntSetLinkedListGlobalLock implements IntSet {
   public boolean contains(int value) {
     boolean result;
 
-    Node previous = m_first;
-    Node next = previous.getNext();
-    int v;
-    while ((v = next.getValue()) < value) {
-      previous = next;
-      next = previous.getNext();
-    }
-    result = (v == value);
+    l.lock();
+    try {
+      Node previous = m_first;
+      Node next = previous.getNext();
+      int v;
+      while ((v = next.getValue()) < value) {
+        previous = next;
+        next = previous.getNext();
+      }
+      result = (v == value);
 
-    return result;
+      return result;
+    } finally {
+      l.unlock();
+    }
   }
 
   public void validate() {

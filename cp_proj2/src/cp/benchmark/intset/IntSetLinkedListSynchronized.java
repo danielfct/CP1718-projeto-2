@@ -78,7 +78,7 @@ public class IntSetLinkedListSynchronized implements IntSet {
     return result;
   }
 
-  public boolean contains(int value) {
+  public synchronized boolean contains(int value) {
     boolean result;
 
     Node previous = m_first;

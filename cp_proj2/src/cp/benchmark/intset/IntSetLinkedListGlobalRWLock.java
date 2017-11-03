@@ -1,5 +1,9 @@
 package cp.benchmark.intset;
 
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 /**
  * @author Pascal Felber
  * @author Tiago Vale
@@ -34,63 +38,77 @@ public class IntSetLinkedListGlobalRWLock implements IntSet {
   }
 
   private final Node m_first;
+  private final ReadWriteLock l;
 
   public IntSetLinkedListGlobalRWLock() {
     Node min = new Node(Integer.MIN_VALUE);
     Node max = new Node(Integer.MAX_VALUE);
+    l = new ReentrantReadWriteLock();
     min.setNext(max);
     m_first = min;
   }
 
   public boolean add(int value) {
     boolean result;
-
-    Node previous = m_first;
-    Node next = previous.getNext();
-    int v;
-    while ((v = next.getValue()) < value) {
-      previous = next;
-      next = previous.getNext();
+    l.writeLock().lock();
+    try {
+      Node previous = m_first;
+      Node next = previous.getNext();
+      int v;
+      while ((v = next.getValue()) < value) {
+        previous = next;
+        next = previous.getNext();
+      }
+      result = v != value;
+      if (result) {
+        previous.setNext(new Node(value, next));
+      }
+      return result;
+    } finally {
+      l.writeLock().unlock();
     }
-    result = v != value;
-    if (result) {
-      previous.setNext(new Node(value, next));
-    }
 
-    return result;
   }
 
   public boolean remove(int value) {
     boolean result;
 
-    Node previous = m_first;
-    Node next = previous.getNext();
-    int v;
-    while ((v = next.getValue()) < value) {
-      previous = next;
-      next = previous.getNext();
-    }
-    result = v == value;
-    if (result) {
-      previous.setNext(next.getNext());
-    }
+    l.writeLock().lock();
+    try {
+      Node previous = m_first;
+      Node next = previous.getNext();
+      int v;
+      while ((v = next.getValue()) < value) {
+        previous = next;
+        next = previous.getNext();
+      }
+      result = v == value;
+      if (result) {
+        previous.setNext(next.getNext());
+      }
 
-    return result;
+      return result;
+    } finally {
+      l.writeLock().unlock();
+    }
   }
 
   public boolean contains(int value) {
     boolean result;
-
-    Node previous = m_first;
-    Node next = previous.getNext();
-    int v;
-    while ((v = next.getValue()) < value) {
-      previous = next;
-      next = previous.getNext();
+    l.readLock().lock();
+    try {
+      Node previous = m_first;
+      Node next = previous.getNext();
+      int v;
+      while ((v = next.getValue()) < value) {
+        previous = next;
+        next = previous.getNext();
+      }
+      result = (v == value);
+      return result;
+    } finally {
+      l.readLock().unlock();
     }
-    result = (v == value);
-
-    return result;
   }
 
   public void validate() {
