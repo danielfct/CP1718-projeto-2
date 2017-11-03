@@ -1,5 +1,7 @@
 package cp.benchmark.intset;
 
+import java.util.concurrent.locks.*;
+
 /**
  * @author Pascal Felber
  * @author Tiago Vale
@@ -34,48 +36,58 @@ public class IntSetLinkedListGlobalLock implements IntSet {
   }
 
   private final Node m_first;
+  private final Lock l;
 
   public IntSetLinkedListGlobalLock() {
     Node min = new Node(Integer.MIN_VALUE);
     Node max = new Node(Integer.MAX_VALUE);
+    l = new ReentrantLock();
     min.setNext(max);
     m_first = min;
   }
 
   public boolean add(int value) {
     boolean result;
+    l.lock();
+    try {
+      Node previous = m_first;
+      Node next = previous.getNext();
+      int v;
+      while ((v = next.getValue()) < value) {
+        previous = next;
+        next = previous.getNext();
+      }
+      result = v != value;
+      if (result) {
+        previous.setNext(new Node(value, next));
+      }
 
-    Node previous = m_first;
-    Node next = previous.getNext();
-    int v;
-    while ((v = next.getValue()) < value) {
-      previous = next;
-      next = previous.getNext();
+      return result;
+    } finally {
+      l.unlock();
     }
-    result = v != value;
-    if (result) {
-      previous.setNext(new Node(value, next));
-    }
-
-    return result;
   }
 
   public boolean remove(int value) {
     boolean result;
+    l.lock();
+    try {
+      Node previous = m_first;
+      Node next = previous.getNext();
+      int v;
+      while ((v = next.getValue()) < value) {
+        previous = next;
+        next = previous.getNext();
+      }
+      result = v == value;
+      if (result) {
+        previous.setNext(next.getNext());
+      }
 
-    Node previous = m_first;
-    Node next = previous.getNext();
-    int v;
-    while ((v = next.getValue()) < value) {
-      previous = next;
-      next = previous.getNext();
+      return result;
+    } finally {
+      l.unlock();
     }
-    result = v == value;
-    if (result) {
-      previous.setNext(next.getNext());
-    }
-
-    return result;
   }
 
   public boolean contains(int value) {
