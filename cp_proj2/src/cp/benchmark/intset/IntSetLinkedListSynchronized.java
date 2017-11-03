@@ -42,7 +42,7 @@ public class IntSetLinkedListSynchronized implements IntSet {
     m_first = min;
   }
 
-  public boolean add(int value) {
+  public synchronized boolean add(int value) {
     boolean result;
 
     Node previous = m_first;
@@ -60,7 +60,7 @@ public class IntSetLinkedListSynchronized implements IntSet {
     return result;
   }
 
-  public boolean remove(int value) {
+  public synchronized boolean remove(int value) {
     boolean result;
 
     Node previous = m_first;
