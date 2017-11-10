@@ -1,5 +1,8 @@
 package cp.benchmark.intset;
 
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.Lock;
+
 /**
  * @author Pascal Felber
  * @author Tiago Vale
@@ -10,10 +13,14 @@ public class IntSetLinkedListLazyPerNodeLock implements IntSet {
   public class Node {
     private final int m_value;
     private Node m_next;
+    private boolean marked;
+    private Lock l;
 
     public Node(int value, Node next) {
       m_value = value;
       m_next = next;
+      marked = false;
+      l = new ReentrantLock();
     }
 
     public Node(int value) {
@@ -31,6 +38,22 @@ public class IntSetLinkedListLazyPerNodeLock implements IntSet {
     public Node getNext() {
       return m_next;
     }
+
+    public boolean isMarked() {
+      return marked;
+    }
+
+    public void setMarked(boolean m) {
+      marked = m;
+    }
+
+    public void lock() {
+      this.l.lock();
+    }
+
+    public void unlock() {
+      this.l.unlock();
+    }
   }
 
   private final Node m_first;
@@ -45,52 +68,71 @@ public class IntSetLinkedListLazyPerNodeLock implements IntSet {
   public boolean add(int value) {
     boolean result;
 
-    Node previous = m_first;
-    Node next = previous.getNext();
-    int v;
-    while ((v = next.getValue()) < value) {
-      previous = next;
-      next = previous.getNext();
-    }
-    result = v != value;
-    if (result) {
-      previous.setNext(new Node(value, next));
-    }
+    while (true) {
+      Node previous = m_first;
+      Node next = previous.getNext();
+      int v;
+      while ((v = next.getValue()) < value) {
+        previous = next;
+        next = previous.getNext();
+      }
+      previous.lock();
+      next.lock();
+      try {
+        if (validate(previous, next)) {
+          result = v != value;
+          if (result) {
+            previous.setNext(new Node(value, next));
+          }
 
-    return result;
+          return result;
+        }
+      } finally {
+        previous.unlock();
+        next.unlock();
+      }
+    }
   }
 
   public boolean remove(int value) {
     boolean result;
 
-    Node previous = m_first;
-    Node next = previous.getNext();
-    int v;
-    while ((v = next.getValue()) < value) {
-      previous = next;
-      next = previous.getNext();
-    }
-    result = v == value;
-    if (result) {
-      previous.setNext(next.getNext());
-    }
+    while (true) {
 
-    return result;
+      Node previous = m_first;
+      Node next = previous.getNext();
+      int v;
+      while ((v = next.getValue()) < value) {
+        previous = next;
+        next = previous.getNext();
+      }
+      previous.lock();
+      next.lock();
+      try {
+        if (validate(previous, next)) {
+          result = v == value;
+          if (result) {
+            next.setMarked(true);
+            previous.setNext(next.getNext());
+          }
+          return result;
+        }
+      } finally {
+        previous.unlock();
+        next.unlock();
+      }
+    }
   }
 
   public boolean contains(int value) {
-    boolean result;
+    Node curr = m_first;
+    while (curr.getValue() < value)
+      curr = curr.getNext();
+    return (curr.getValue() == value && !curr.isMarked());
+  }
 
-    Node previous = m_first;
-    Node next = previous.getNext();
-    int v;
-    while ((v = next.getValue()) < value) {
-      previous = next;
-      next = previous.getNext();
-    }
-    result = (v == value);
-
-    return result;
+  private boolean validate(Node previous, Node curr) {
+    return !previous.isMarked() && !curr.isMarked() && previous.getNext() == curr;
   }
 
   public void validate() {

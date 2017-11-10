@@ -74,11 +74,10 @@ public class IntSetLinkedListPerNodeLock implements IntSet {
       if (result) {
         previous.setNext(new Node(value, next));
       }
-
       return result;
     } finally {
-      previous.unlock();
       next.unlock();
+      previous.unlock();
     }
   }
 
@@ -104,8 +103,8 @@ public class IntSetLinkedListPerNodeLock implements IntSet {
 
       return result;
     } finally {
-      previous.unlock();
       next.unlock();
+      previous.unlock();
     }
   }
 
@@ -128,8 +127,8 @@ public class IntSetLinkedListPerNodeLock implements IntSet {
 
       return result;
     } finally {
-      previous.unlock();
       next.unlock();
+      previous.unlock();
     }
   }
 
