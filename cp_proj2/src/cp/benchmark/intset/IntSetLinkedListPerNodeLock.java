@@ -1,7 +1,6 @@
 package cp.benchmark.intset;
 
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.*;
 
 /**
  * @author Pascal Felber
@@ -12,17 +11,17 @@ public class IntSetLinkedListPerNodeLock implements IntSet {
 
   public class Node {
     private final int m_value;
-    private final Lock l;
     private Node m_next;
+    private final Lock l;
+
+    public Node(int value) {
+      this(value, null);
+    }
 
     public Node(int value, Node next) {
       m_value = value;
       m_next = next;
       l = new ReentrantLock();
-    }
-
-    public Node(int value) {
-      this(value, null);
     }
 
     public int getValue() {
@@ -59,11 +58,11 @@ public class IntSetLinkedListPerNodeLock implements IntSet {
     boolean result;
 
     Node previous = m_first;
+    previous.lock();
     Node next = previous.getNext();
+    next.lock();
     int v;
     try {
-      previous.lock();
-      next.lock();
       while ((v = next.getValue()) < value) {
         previous.unlock();
         previous = next;
@@ -76,8 +75,8 @@ public class IntSetLinkedListPerNodeLock implements IntSet {
       }
       return result;
     } finally {
-      next.unlock();
       previous.unlock();
+      next.unlock();
     }
   }
 
@@ -85,11 +84,11 @@ public class IntSetLinkedListPerNodeLock implements IntSet {
     boolean result;
 
     Node previous = m_first;
+    previous.lock();
     Node next = previous.getNext();
+    next.lock();
     int v;
     try {
-      previous.lock();
-      next.lock();
       while ((v = next.getValue()) < value) {
         previous.unlock();
         previous = next;
@@ -100,35 +99,31 @@ public class IntSetLinkedListPerNodeLock implements IntSet {
       if (result) {
         previous.setNext(next.getNext());
       }
-
       return result;
     } finally {
-      next.unlock();
       previous.unlock();
+      next.unlock();
     }
   }
 
   public boolean contains(int value) {
     boolean result;
-
     Node previous = m_first;
+    previous.lock();
     Node next = previous.getNext();
+    next.lock();
     int v;
     try {
-      previous.lock();
-      next.lock();
       while ((v = next.getValue()) < value) {
         previous.unlock();
         previous = next;
         next = previous.getNext();
         next.lock();
       }
-      result = (v == value);
-
-      return result;
+      return (v == value);
     } finally {
-      next.unlock();
       previous.unlock();
+      next.unlock();
     }
   }
 
