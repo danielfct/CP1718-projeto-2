@@ -10,7 +10,6 @@ import java.util.concurrent.atomic.AtomicMarkableReference;
 public class IntSetLinkedListLockFree implements IntSet {
 
 	public class Node {
-
 		private final int value;
 		private AtomicMarkableReference<Node> next;
 
@@ -26,11 +25,11 @@ public class IntSetLinkedListLockFree implements IntSet {
 		public int getValue() {
 			return value;
 		}
-		
+
 		public boolean compareAndSetNext(Node expectedNode, Node newNode, boolean expectedMark, boolean newMark) {
 			return this.next.compareAndSet(expectedNode, newNode, expectedMark, newMark);
 		}
-		
+
 		public boolean attemptMarkNext(Node expectedNode, boolean newMark) {
 			return this.next.attemptMark(expectedNode, newMark);
 		}
@@ -47,7 +46,7 @@ public class IntSetLinkedListLockFree implements IntSet {
 		m_first = new Node(Integer.MIN_VALUE, new Node(Integer.MAX_VALUE));
 	}
 
-	public Node find(int value) {
+	private Node find(int value) {
 		retry: while (true) {
 			Node previous = m_first;
 			Node current = previous.getNext().getReference();
@@ -67,7 +66,6 @@ public class IntSetLinkedListLockFree implements IntSet {
 			}
 		}
 	}
-
 
 	public boolean add(int value) {
 		while (true) {
